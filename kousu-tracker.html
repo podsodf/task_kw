@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工数記録ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #F5F3EE;
+    --surface:   #FFFFFF;
+    --border:    #E0DDD6;
+    --border2:   #CCC9C0;
+    --text:      #1C1A14;
+    --text2:     #6B6760;
+    --accent:    #1A5C4E;
+    --accent2:   #E8F4F1;
+    --accent3:   #B8DDD6;
+    --danger:    #C0392B;
+    --warn:      #D4870A;
+    --warn-bg:   #FEF3E2;
+    --mono:      'JetBrains Mono', monospace;
+    --sans:      'Noto Sans JP', sans-serif;
+    --radius:    6px;
+    --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ─── Layout ─── */
+  .app-header {
+    background: var(--accent);
+    color: #fff;
+    padding: 0 24px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-header h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .app-header h1 span { font-family: var(--mono); font-size: 11px; opacity: .6; font-weight: 400; }
+
+  .tab-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 16px;
+  }
+  .tab-btn {
+    background: none; border: none; cursor: pointer;
+    font-family: var(--sans); font-size: 13px; font-weight: 500;
+    color: var(--text2);
+    padding: 12px 16px;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:hover:not(.active) { color: var(--text); background: var(--bg); }
+
+  .main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+
+  /* ─── Cards ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .card-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .04em;
+    color: var(--text2);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-body { padding: 18px; }
+
+  /* ─── Form ─── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid.three { grid-template-columns: 1fr 2fr 80px; }
+  .form-grid.four  { grid-template-columns: 120px 1fr 2fr 90px; }
+  .full { grid-column: 1 / -1; }
+
+  label { display: block; font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+
+  input[type=text], input[type=date], input[type=number], select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent2);
+    background: #fff;
+  }
+  input[type=number] { font-family: var(--mono); }
+
+  /* ─── Buttons ─── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    border: none; cursor: pointer;
+    font-family: var(--sans); font-size: 13px; font-weight: 700;
+    transition: all .15s;
+    letter-spacing: .02em;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #154e42; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border2); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger { background: none; color: var(--danger); border: 1px solid transparent; font-size: 12px; padding: 4px 8px; }
+  .btn-danger:hover { background: #fef2f2; border-color: var(--danger); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-export { background: var(--warn-bg); color: var(--warn); border: 1px solid #F0C060; }
+  .btn-export:hover { background: #fde9b8; }
+
+  /* ─── Table ─── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-size: 11px; font-weight: 700; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border2);
+    text-align: left;
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafaf7; }
+  .num { font-family: var(--mono); font-weight: 600; text-align: right; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 30px;
+    font-size: 11px; font-weight: 700;
+    background: var(--accent2); color: var(--accent);
+  }
+
+  /* ─── Summary ─── */
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .stat-box .label { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .stat-box .value { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--accent); line-height: 1; }
+  .stat-box .unit  { font-size: 12px; color: var(--text2); margin-left: 2px; }
+
+  /* Progress bar */
+  .bar-wrap { margin-top: 4px; background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s ease; }
+
+  /* ─── Project chip ─── */
+  .project-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .proj-chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 10px 5px 12px;
+    background: var(--accent2); border: 1px solid var(--accent3);
+    border-radius: 30px; font-size: 12px; font-weight: 700; color: var(--accent);
+  }
+  .proj-chip button { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 14px; line-height: 1; padding: 0; opacity: .6; }
+  .proj-chip button:hover { opacity: 1; }
+
+  /* ─── Empty state ─── */
+  .empty { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; }
+  .empty .icon { font-size: 32px; margin-bottom: 8px; }
+
+  /* ─── Notices ─── */
+  .notice { padding: 10px 14px; border-radius: var(--radius); font-size: 12px; margin-bottom: 12px; }
+  .notice-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid #F0C060; }
+
+  /* ─── Month picker ─── */
+  .month-nav { display: flex; align-items: center; gap: 12px; }
+  .month-display { font-family: var(--mono); font-size: 18px; font-weight: 600; min-width: 100px; text-align: center; }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 600px) {
+    .form-grid.four { grid-template-columns: 1fr 1fr; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid.four .full { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="module">
+import { h, render } from 'https://esm.sh/preact@10.19.2';
+import { useState, useEffect, useCallback, useMemo } from 'https://esm.sh/preact@10.19.2/hooks';
+import htm from 'https://esm.sh/htm@3.1.1';
+const html = htm.bind(h);
+
+/* ════════════════════════════════════════
+   Storage
+════════════════════════════════════════ */
+const KEYS = { projects: 'kousu_projects', entries: 'kousu_entries' };
+
+const load  = k => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; } };
+const save  = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ════════════════════════════════════════
+   CSV
+════════════════════════════════════════ */
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const bom  = '\uFEFF';
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ════════════════════════════════════════
+   App
+════════════════════════════════════════ */
+function App() {
+  const [tab, setTab]           = useState('entry');
+  const [projects, setProjects] = useState(() => load(KEYS.projects));
+  const [entries,  setEntries]  = useState(() => load(KEYS.entries));
+
+  // 月次ビュー用
+  const now = new Date();
+  const [viewYear,  setViewYear]  = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1);
+
+  useEffect(() => save(KEYS.projects, projects), [projects]);
+  useEffect(() => save(KEYS.entries,  entries),  [entries]);
+
+  const addProject = name => {
+    if (!name.trim() || projects.includes(name.trim())) return false;
+    setProjects(p => [...p, name.trim()]);
+    return true;
+  };
+  const removeProject = name => setProjects(p => p.filter(x => x !== name));
+
+  const addEntry = entry => setEntries(e => [{ ...entry, id: uid() }, ...e]);
+  const delEntry = id    => setEntries(e => e.filter(x => x.id !== id));
+
+  return html`
+    <div>
+      <header class="app-header">
+        <h1>⏱ 工数記録ツール <span>v1.0</span></h1>
+      </header>
+
+      <nav class="tab-bar">
+        ${['entry','log','summary','projects'].map(t => html`
+          <button class=${`tab-btn ${tab===t?'active':''}`} onClick=${()=>setTab(t)}>
+            ${{ entry:'入力', log:'記録一覧', summary:'月次集計', projects:'案件管理' }[t]}
+          </button>
+        `)}
+      </nav>
+
+      <main class="main">
+        ${tab === 'entry'    && html`<${EntryTab}    projects=${projects} addEntry=${addEntry} />`}
+        ${tab === 'log'      && html`<${LogTab}      entries=${entries}   projects=${projects} delEntry=${delEntry} />`}
+        ${tab === 'summary'  && html`<${SummaryTab}  entries=${entries}   projects=${projects}
+                                       year=${viewYear} month=${viewMonth}
+                                       setYear=${setViewYear} setMonth=${setViewMonth} />`}
+        ${tab === 'projects' && html`<${ProjectsTab} projects=${projects} entries=${entries}
+                                       addProject=${addProject} removeProject=${removeProject} />`}
+      </main>
+    </div>
+  `;
+}
+
+/* ════════════════════════════════════════
+   EntryTab — 日次入力
+════════════════════════════════════════ */
+function EntryTab({ projects, addEntry }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({ date: today, project: '', memo: '', hours: '' });
+  const [done, setDone] = useState(false);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = () => {
+    if (!form.project || !form.hours || !form.date) return;
+    const h = parseFloat(form.hours);
+    if (isNaN(h) || h <= 0) return;
+    addEntry({ ...form, hours: h });
+    setForm(f => ({ ...f, project: '', memo: '', hours: '' }));
+    setDone(true);
+    setTimeout(() => setDone(false), 2000);
+  };
+
+  const handleKey = e => { if (e.key === 'Enter' && e.ctrlKey) submit(); };
+
+  return html`
+    <div>
+      ${projects.length === 0 && html`
+        <div class="notice notice-warn">
+          ⚠ まず「案件管理」タブで案件を登録してください
+        </div>
+      `}
+
+      <div class="card">
+        <div class="card-head">工数を入力</div>
+        <div class="card-body" onKeyDown=${handleKey}>
+          <div class="form-grid four" style="margin-bottom:12px">
+            <div>
+              <label>日付</label>
+              <input type="date" value=${form.date} onChange=${e => set('date', e.target.value)} />
+            </div>
+            <div>
+              <label>案件名</label>
+              <select value=${form.project} onChange=${e => set('project', e.target.value)}
+                      style="background:${form.project ? '#fff' : 'var(--bg)'}">
+                <option value="">-- 選択 --</option>
+                ${projects.map(p => html`<option value=${p}>${p}</option>`)}
+              </select>
+            </div>
+            <div style="grid-column: span 1">
+              <label>作業メモ</label>
+              <input type="text" placeholder="LP修正、MTG、資料作成…" value=${form.memo}
+                     onChange=${e => set('memo', e.target.value)} />
+            </div>
+            <div>
+              <label>時間 (h)</label>
+              <input type="number" step="0.25" min="0.25" max="24" placeholder="0.5"
+                     value=${form.hours} onChange=${e => set('hours', e.target.value)} />
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-primary" onClick=${submit}
+                    disabled=${!form.project || !form.hours || !form.date}>
+              ＋ 記録する
+            </button>
+            <span style="font-size:11px;color:var(--text2)">Ctrl+Enter でも登録</span>
+            ${done && html`<span style="color:var(--accent);font-weight:700;font-size:13px">✓ 登録しました</span>`}
+          </div>
+        </div>
+      </div>
+
+      <${QuickHours} />
+    </div>
+  `;
+}
+
+function QuickHours() {
+  return html`
+    <div class="card">
+      <div class="card-head">時間の目安</div>
+      <div class="card-body" style="display:flex;flex-wrap:wrap;gap:8px">
+        ${[[0.25,'15分'],[0.5,'30分'],[0.75,'45分'],[1,'1時間'],[1.5,'1.5時間'],[2,'2時間'],[3,'3時間'],[4,'半日'],[8,'1日']].map(([h,l]) => html`
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-size:12px">
+            <span style="font-family:var(--mono);font-weight:600;color:var(--accent)">${h}</span>
+            <span style="color:var(--text2);margin-left:4px">${l}</span>
+          </div>
+        `)}
+      </div>
+    </div>
+  `;
+}
+
+/* ════════════════════════════════════════
+   LogTab — 記録一覧
+════════════════════════════════════════ */
+function LogTab({ entries, projects, delEntry }) {
+  const [filterProject, setFilterProject] = useState('');
+  const [filterMonth,   setFilterMonth]   = useState('');
+
+  const months = useMemo(() => {
+    const s = new Set(entries.map(e => e.date.slice(0,7)));
+    return [...s].sort().reverse();
+  }, [entries]);
+
+  const filtered = useMemo(() => entries.filter(e => {
+    if (filterProject && e.project !== filterProject) return false;
+    if (filterMonth   && !e.date.startsWith(filterMonth)) return false;
+    return true;
+  }), [entries, filterProject, filterMonth]);
+
+  const totalH = filtered.reduce((s, e) => s + e.hours, 0);
+
+  const exportFiltered = () => {
+    const rows = [['日付','案件名','作業メモ','時間(h)']];
+    filtered.forEach(e => rows.push([e.date, e.project, e.memo||'', e.hours]));
+    downloadCSV(rows, `工数記録_${filterMonth||'全期間'}.csv`);
+  };
+
+  return html`
+    <div>
+      <div class="card">
+        <div class="card-head">
+          絞り込み
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div>
+              <label>月</label>
+              <select value=${filterMonth} onChange=${e => setFilterMonth(e.target.value)}>
+                <option value="">全期間</option>
+                ${months.map(m => html`<option value=${m}>${m}</option>`)}
+              </select>
+            </div>
+            <div>
+              <label>案件</label>
+              <select value=${filterProject} onChange=${e => setFilterProject(e.target.value)}>
+                <option value="">すべて</option>
+                ${projects.map(p => html`<option value=${p}>${p}</option>`)}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span>${filtered.length}件 ／ 合計 <span style="font-family:var(--mono);color:var(--accent)">${totalH.toFixed(2)}h</span></span>
+          <button class="btn btn-export btn-sm" onClick=${exportFiltered}>⬇ CSVエクスポート</button>
+        </div>
+        ${filtered.length === 0
+          ? html`<div class="empty"><div class="icon">📋</div>記録がありません</div>`
+          : html`
+            <table>
+              <thead><tr>
+                <th>日付</th>
+                <th>案件名</th>
+                <th>作業メモ</th>
+                <th style="text-align:right">時間</th>
+                <th></th>
+              </tr></thead>
+              <tbody>
+                ${filtered.map(e => html`
+                  <tr key=${e.id}>
+                    <td style="font-family:var(--mono);white-space:nowrap">${e.date}</td>
+                    <td><span class="tag">${e.project}</span></td>
+                    <td style="color:var(--text2)">${e.memo || '—'}</td>
+                    <td class="num">${e.hours.toFixed(2)}<span style="font-size:11px;color:var(--text2)"> h</span></td>
+                    <td><button class="btn btn-danger" onClick=${()=>delEntry(e.id)}>✕</button></td>
+                  </tr>
+                `)}
+              </tbody>
+            </table>
+          `}
+      </div>
+    </div>
+  `;
+}
+
+/* ════════════════════════════════════════
+   SummaryTab — 月次集計
+════════════════════════════════════════ */
+function SummaryTab({ entries, projects, year, month, setYear, setMonth }) {
+  const prevMonth = () => {
+    if (month === 1) { setYear(y => y - 1); setMonth(12); }
+    else setMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (month === 12) { setYear(y => y + 1); setMonth(1); }
+    else setMonth(m => m + 1);
+  };
+
+  const prefix = `${year}-${String(month).padStart(2,'0')}`;
+
+  const monthEntries = useMemo(() => entries.filter(e => e.date.startsWith(prefix)), [entries, prefix]);
+
+  const totalH   = monthEntries.reduce((s, e) => s + e.hours, 0);
+  const daysSet  = new Set(monthEntries.map(e => e.date));
+  const totalD   = daysSet.size;
+
+  // 案件別集計
+  const byProject = useMemo(() => {
+    const map = {};
+    monthEntries.forEach(e => {
+      map[e.project] = (map[e.project] || 0) + e.hours;
+    });
+    return Object.entries(map).sort((a,b) => b[1]-a[1]);
+  }, [monthEntries]);
+
+  // 日別推移
+  const byDate = useMemo(() => {
+    const map = {};
+    monthEntries.forEach(e => {
+      map[e.date] = (map[e.date] || 0) + e.hours;
+    });
+    return Object.entries(map).sort();
+  }, [monthEntries]);
+
+  const exportMonth = () => {
+    const rows = [['案件名','時間(h)','割合(%)']];
+    byProject.forEach(([p, h]) => rows.push([p, h.toFixed(2), totalH>0?(h/totalH*100).toFixed(1):'0']));
+    rows.push(['合計', totalH.toFixed(2), '100.0']);
+    downloadCSV(rows, `工数集計_${prefix}.csv`);
+  };
+
+  const exportDetail = () => {
+    const rows = [['日付','案件名','作業メモ','時間(h)']];
+    monthEntries.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e => rows.push([e.date, e.project, e.memo||'', e.hours]));
+    downloadCSV(rows, `工数詳細_${prefix}.csv`);
+  };
+
+  return html`
+    <div>
+      <div class="card">
+        <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div class="month-nav">
+            <button class="btn btn-secondary btn-sm" onClick=${prevMonth}>◀</button>
+            <div class="month-display">${year}<span style="font-size:14px;opacity:.6">年</span>${String(month).padStart(2,'0')}<span style="font-size:14px;opacity:.6">月</span></div>
+            <button class="btn btn-secondary btn-sm" onClick=${nextMonth}>▶</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-export btn-sm" onClick=${exportMonth}>⬇ 集計CSV</button>
+            <button class="btn btn-secondary btn-sm" onClick=${exportDetail}>⬇ 詳細CSV</button>
+          </div>
+        </div>
+      </div>
+
+      ${monthEntries.length === 0
+        ? html`<div class="card"><div class="empty"><div class="icon">📊</div>この月の記録はありません</div></div>`
+        : html`
+          <div class="summary-grid">
+            <div class="stat-box">
+              <div class="label">合計工数</div>
+              <div class="value">${totalH.toFixed(1)}<span class="unit">h</span></div>
+            </div>
+            <div class="stat-box">
+              <div class="label">稼働日数</div>
+              <div class="value">${totalD}<span class="unit">日</span></div>
+            </div>
+            <div class="stat-box">
+              <div class="label">案件数</div>
+              <div class="value">${byProject.length}<span class="unit">件</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">案件別集計</div>
+            <table>
+              <thead><tr>
+                <th>案件名</th>
+                <th style="text-align:right">時間</th>
+                <th style="text-align:right">割合</th>
+                <th style="min-width:120px">バー</th>
+              </tr></thead>
+              <tbody>
+                ${byProject.map(([proj, h]) => html`
+                  <tr key=${proj}>
+                    <td><span class="tag">${proj}</span></td>
+                    <td class="num">${h.toFixed(2)}<span style="font-size:11px;color:var(--text2)"> h</span></td>
+                    <td class="num" style="color:var(--text2);font-size:12px">${totalH>0?(h/totalH*100).toFixed(1):0}%</td>
+                    <td>
+                      <div class="bar-wrap">
+                        <div class="bar-fill" style="width:${totalH>0?(h/totalH*100):0}%"></div>
+                      </div>
+                    </td>
+                  </tr>
+                `)}
+                <tr style="font-weight:700;background:var(--accent2)">
+                  <td>合計</td>
+                  <td class="num" style="color:var(--accent)">${totalH.toFixed(2)}<span style="font-size:11px"> h</span></td>
+                  <td></td><td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          ${byDate.length > 0 && html`
+            <div class="card">
+              <div class="card-head">日別工数</div>
+              <table>
+                <thead><tr>
+                  <th>日付</th>
+                  <th style="text-align:right">時間</th>
+                  <th>バー</th>
+                </tr></thead>
+                <tbody>
+                  ${byDate.map(([date, h]) => html`
+                    <tr key=${date}>
+                      <td style="font-family:var(--mono)">${date}</td>
+                      <td class="num">${h.toFixed(2)}<span style="font-size:11px;color:var(--text2)"> h</span></td>
+                      <td>
+                        <div class="bar-wrap">
+                          <div class="bar-fill" style="width:${Math.min(h/10*100,100)}%;background:var(--accent3)"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  `)}
+                </tbody>
+              </table>
+            </div>
+          `}
+        `}
+    </div>
+  `;
+}
+
+/* ════════════════════════════════════════
+   ProjectsTab — 案件管理
+════════════════════════════════════════ */
+function ProjectsTab({ projects, entries, addProject, removeProject }) {
+  const [input, setInput] = useState('');
+  const [err,   setErr]   = useState('');
+
+  const add = () => {
+    const name = input.trim();
+    if (!name) return;
+    if (!addProject(name)) { setErr('すでに登録されています'); return; }
+    setInput(''); setErr('');
+  };
+
+  const handleKey = e => { if (e.key === 'Enter') add(); };
+
+  const countFor = name => entries.filter(e => e.project === name).length;
+  const hoursFor = name => entries.filter(e => e.project === name).reduce((s,e) => s+e.hours, 0);
+
+  return html`
+    <div>
+      <div class="card">
+        <div class="card-head">案件を追加</div>
+        <div class="card-body">
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <div style="flex:1">
+              <label>案件名</label>
+              <input type="text" placeholder="例: CoreTech SEO Challenge" value=${input}
+                     onChange=${e => { setInput(e.target.value); setErr(''); }}
+                     onKeyDown=${handleKey} maxlength="40" />
+              ${err && html`<div style="color:var(--danger);font-size:11px;margin-top:4px">${err}</div>`}
+            </div>
+            <button class="btn btn-primary" onClick=${add}>＋ 追加</button>
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-top:8px">Enter キーでも追加できます</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">登録済み案件 (${projects.length}件)</div>
+        ${projects.length === 0
+          ? html`<div class="empty"><div class="icon">📁</div>案件がまだ登録されていません</div>`
+          : html`
+            <table>
+              <thead><tr>
+                <th>案件名</th>
+                <th style="text-align:right">記録件数</th>
+                <th style="text-align:right">累計工数</th>
+                <th></th>
+              </tr></thead>
+              <tbody>
+                ${projects.map(p => html`
+                  <tr key=${p}>
+                    <td><span class="tag">${p}</span></td>
+                    <td class="num" style="color:var(--text2)">${countFor(p)}<span style="font-size:11px"> 件</span></td>
+                    <td class="num">${hoursFor(p).toFixed(2)}<span style="font-size:11px;color:var(--text2)"> h</span></td>
+                    <td>
+                      <button class="btn btn-danger"
+                        onClick=${()=>{ if(confirm(`「${p}」を削除しますか？\n記録は残ります。`)) removeProject(p); }}>
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                `)}
+              </tbody>
+            </table>
+          `}
+      </div>
+    </div>
+  `;
+}
+
+render(h(App, null), document.getElementById('app'));
+</script>
+</body>
+</html>
